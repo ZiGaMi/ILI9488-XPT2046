@@ -119,6 +119,34 @@ Calibration routine is based on three points and takes care of three errors: sca
 
 ## DISPLAY API
 
+### Colors
+Driver supports following colors:
+
+```
+// Colors
+typedef enum
+{
+  eILI9488_COLOR_BLACK = 0,
+  eILI9488_COLOR_BLUE,
+  eILI9488_COLOR_GREEN,
+  eILI9488_COLOR_TURQUOISE,
+  eILI9488_COLOR_RED,
+  eILI9488_COLOR_PURPLE,
+  eILI9488_COLOR_YELLOW,
+  eILI9488_COLOR_WHITE,
+  eILI9488_COLOR_LIGHT_GRAY,
+  eILI9488_COLOR_GRAY,
+} ili9488_color_t;
+```
+
+### Background set
+Set display background color.
+
+``` 
+  // Set black background 
+  ili9488_set_background( eILI9488_COLOR_BLACK );
+```
+
 ### Rectange drawing
 Driver supports four types of rectangle: simple, simple with border, rounded and rounded with border. Before drawing rectangle attributes must be determine first. Examples of all four types of rectangles are demonstrated bellow:
 
@@ -212,7 +240,7 @@ Driver supports two kinds of circle drawings: simple and with border. Similar to
 
 ```
   // Circle attributes
-	ili9488_circ_attr_t circ_attr;
+  ili9488_circ_attr_t circ_attr;
 
   // -------------------------------------------
   //	CIRCLE DRAWINGS
@@ -248,10 +276,7 @@ Driver supports two kinds of circle drawings: simple and with border. Similar to
   ili9488_draw_circle( &circ_attr );
 ```
 
-
-### Text drawing
-
-#### String type
+### String drawing
 For drawing string to display first string pen shall be set. String pen define foreground, background color of string and font. Five different in size fonts are available to use, from 8pt to 24pt height.
 
 ```
@@ -263,7 +288,7 @@ For drawing string to display first string pen shall be set. String pen define f
 ```
 
 
-#### Formated string type
+### Formated string drawing
 Driver support also formated string drawing. Similar as drawing a string first string pen must be set and also cursor. Cursor define start coordinates of formated string.
 
 ```	
