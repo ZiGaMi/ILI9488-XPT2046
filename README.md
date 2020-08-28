@@ -30,6 +30,27 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
   }
 ```
 
+### 4. Checking for touch
+
+```
+  // Touch variables
+  uint16_t x_pos;
+  uint16_t y_pos;
+  uint16_t force;
+  bool touch;
+
+  // Touch task or simple main loop
+  @every 10 ms
+  {
+    // Handle touch controller
+    xpt2046_hndl();
+
+    // Get data
+    xpt2046_get_touch( &x_pos, &y_pos, &force, &touch );
+  }
+```
+
+
 ## CONSTRAINS
 - Both drivers are written based on single thread system, thus if using drivers on multithread platform take that into consideration. Furhtermore both drivers were tested on signle and multi threaded system (testing on STM32F746ZQ & FreeRTOS v10.2.1 ).
 - SPI interface with display and touch controler is blocking in nature (DMA will be implemented in future)
@@ -38,6 +59,19 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 
 
 ## TOUCH CALIBRATION ROUTINE
+Display features also resistive touch and in case of need, calibration routine is mandatory. 
+Calibration routine is based on three points and takes care of three errors: scale, offset and rotation. 
+### Steps of calibration
+1. Initiate calibration by calling following function:
+```
+  xpt2046_start_calibration();
+```
+2. Touch points on display 
+3. Store calibration factors into power independent memory. Factors are provided by following function:
+```
+  int32_t factors[7];
+  xpt2046_get_cal_factors( &factors );
+```
 
 
 ## GRAPHICS
