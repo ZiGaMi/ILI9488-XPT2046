@@ -208,6 +208,46 @@ Driver supports four types of rectangle: simple, simple with border, rounded and
 
 
 ### Circle drawing
+Driver supports two kinds of circle drawings: simple and with border. Similar to rectangle drawing, attributes for circle must first be set. Both types of circle drawing is given bellow: 
+
+```
+  // Circle attributes
+	ili9488_circ_attr_t circ_attr;
+
+  // -------------------------------------------
+  //	CIRCLE DRAWINGS
+  // -------------------------------------------
+
+  // 1. Simple circle
+  circ_attr.position.start_page = 50;
+  circ_attr.position.start_col  = 260;
+  circ_attr.position.radius     = 25;
+
+  circ_attr.border.enable       = false;
+  circ_attr.border.width        = 0;
+  circ_attr.border.color        = eILI9488_COLOR_BLACK;
+
+  circ_attr.fill.enable         = true;
+  circ_attr.fill.color          = eILI9488_COLOR_TURQUOISE;
+
+  ili9488_draw_circle( &circ_attr );
+
+
+  // 2. Circle with border
+  circ_attr.position.start_page = 250;
+  circ_attr.position.start_col  = 260;
+  circ_attr.position.radius     = 50;
+
+  circ_attr.border.enable       = true;
+  circ_attr.border.width        = 7;
+  circ_attr.border.color        = eILI9488_COLOR_GREEN;
+
+  circ_attr.fill.enable         = true;
+  circ_attr.fill.color          = eILI9488_COLOR_LIGHT_GRAY;
+
+  ili9488_draw_circle( &circ_attr );
+```
+
 
 ### Text drawing
 
