@@ -76,10 +76,18 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
   {
     // Handle touch controller
     xpt2046_hndl();
-
-    // Get data
-    xpt2046_get_touch( &x_pos, &y_pos, &force, &touch );
   }
+```
+- Access touch data via **xpt2046_get_touch** function. This function only returns values from local data and doesn't interface with touch controller, thus can be used in multithreaded system without any constrains.
+```
+  // Touch variables
+  uint16_t x_pos;
+  uint16_t y_pos;
+  uint16_t force;
+  bool touch;
+  
+  // Get touch data
+  xpt2046_get_touch( &x_pos, &y_pos, &force, &touch );
 ```
 
 
@@ -102,7 +110,7 @@ Calibration routine is based on three points and takes care of three errors: sca
   xpt2046_start_calibration();
 ```
 2. Touch points on display 
-3. Store calibration factors into power independent memory. Factors are provided by following function:
+3. Store calibration factors into power independent memory. Factors can be access as shown bellow:
 ```
   int32_t factors[7];
   xpt2046_get_cal_factors( &factors );
