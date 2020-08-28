@@ -303,4 +303,11 @@ Driver support also formated string drawing. Similar as drawing a string first s
 ```
 **NOTE: Formated string uses sprintf, thus use it with care!**
 
+### Backlight brigthness
+TODO: ...
+
+
+# GENERAL TODO: 
+- push latest drivers changes 
+
 
