@@ -61,8 +61,8 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
 ```
 
 ### 5. Touch handler
-- Touch controler need to be handle every x ms in order to preserve real-time behaviour. Thus calling **xpt2046_hndl()** every x ms is mandatory.
-- Display controler does not have any handler
+- Touch controler (xpt2046) need to be handle every x ms in order to preserve real-time behaviour. Thus calling **xpt2046_hndl()** every x ms is mandatory.
+- Display controler (ili9488) does not have any handler
 
 ```
   // Touch variables
@@ -78,7 +78,7 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
     xpt2046_hndl();
   }
 ```
-- Access touch data via **xpt2046_get_touch** function. This function only returns values from local data and doesn't interface with touch controller, thus can be used in multithreaded system without any constrains.
+- Access touch data via **xpt2046_get_touch(...)** function. This function only returns values from local data and doesn't interface with touch controller itself.
 ```
   // Touch variables
   uint16_t x_pos;
@@ -92,8 +92,8 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
 
 
 ## CONSTRAINS
-- Both drivers are written using ST HAL libraries and thus suitable more for STM32
-- For know low level SPI interface must be defined by user
+- Both drivers are written using ST HAL libraries and thus suitable only for STM32. For other platforms only low level layer shall be change (gpio, spi and timer for pwm).
+- For know low level SPI interface must be provided by user, unless using STM32 HAL libraries
 - Both drivers are written based on single thread system, thus if using drivers on multithread platform take that into consideration. Furhtermore both drivers were tested on signle and multi threaded system (testing on STM32F746ZQ & FreeRTOS v10.2.1 ).
 - SPI interface with display and touch controler is blocking in nature (DMA will be implemented in future)
 - Two separate SPI peripheral is used (combining SPI bus will be implemented in future)
