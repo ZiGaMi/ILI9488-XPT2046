@@ -252,9 +252,30 @@ Driver supports two kinds of circle drawings: simple and with border. Similar to
 ### Text drawing
 
 #### String type
+For drawing string to display first string pen shall be set. String pen define foreground, background color of string and font. Five different in size fonts are available to use, from 8pt to 24pt height.
+
+```
+	// Set string pen
+	ili9488_set_string_pen( eILI9488_COLOR_RED, eILI9488_COLOR_WHITE, eILI9488_FONT_20 );
+	
+	// Draw string 
+	ili9488_set_string( "HelloWorld", 100, 120 );
+```
+
 
 #### Formated string type
+Driver support also formated string drawing. Similar as drawing a string first string pen must be set and also cursor. Cursor define start coordinates of formated string.
 
-
+```	
+	// Set string pen
+	ili9488_set_string_pen( eILI9488_COLOR_RED, eILI9488_COLOR_WHITE, eILI9488_FONT_20 );
+	
+	// Set cursor
+	ili9488_set_cursor( 20, 20 );
+	
+	// Draw formated string
+	ili9488_printf( "%d", HAL_GetTick() );
+```
+**NOTE: Formated string uses sprintf, thus use it with care!**
 
 
