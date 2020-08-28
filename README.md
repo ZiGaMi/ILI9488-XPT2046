@@ -1,5 +1,5 @@
 # ILI9488-XPT2046
-Display driver for 3.5" SPI TFT 480x320 with resistive touch. Featuring two chips, ILI9488 (display controler) and XPT2046 (touch controler)
+Display driver for 3.5" SPI TFT 480x320 with resistive touch. Featuring two chips, ILI9488 (display controler) and XPT2046 (touch controler). Written and tested on STM32F746 Nucleo board, using STM32CubeIDE. 
 
 ## USAGE
 ### 1. Setting up configurations
@@ -7,14 +7,44 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 
 ##### NOTE: When debug mode is enabled user shall provide debug communication port by the choise!
 
-### 2. Includes
+### 2. Low level interface
+- User shall provide low level SPI interface, with predefined functions form and glued it to low level interface modules of drivers. There are two functions for each driver that shall be provided: **spi_transmit** and **spi_receive**.
+
+#### Function forms
+```
+  // SPI receive number of bytes
+  spi_status_t spi_receive(uint8_t * p_rx, const uint32_t size);
+  
+  // SPI transmit number of bytes
+  spi_status_t spi_transmit(uint8_t * p_tx, const uint32_t size);
+  
+  // Where status is:
+  typedef enum
+  {
+    eSPI_OK = 0,
+    eSPI_ERROR
+  } spi_status_t;
+```
+
+#### Gluing SPI functions to low level driver
+- Linking user SPI functions to drivers low level functions is done via function pointers. As seen from ili9488_low_if.c file:
+```
+// Pointer to SPI functions
+// NOTE: 	User shall connect to these two variables SPI
+//			tx/rx function. This makes low level platform
+//			independent.
+static pf_spi_tx_t gpf_spi_transmit = spi_transmit;
+static pf_spi_rx_t gpf_spi_receive = spi_receive;
+```
+
+### 3. Includes
   Only top level modules are needed, thus two includes shall be provided by user:
 ```
   #include "ili9488.h"
   #include "xpt2046.h"
 ```
 
-### 3. Initialization
+### 4. Initialization
 
 ```
   // Init display controller
@@ -30,7 +60,9 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
   }
 ```
 
-### 4. Checking for touch
+### 5. Touch handler
+- Touch controler need to be handle every x ms in order to preserve real-time behaviour. Thus calling **xpt2046_hndl()** every x ms is mandatory.
+- Display controler does not have any handler
 
 ```
   // Touch variables
@@ -52,10 +84,13 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 
 
 ## CONSTRAINS
+- Both drivers are written using ST HAL libraries and thus suitable more for STM32
+- For know low level SPI interface must be defined by user
 - Both drivers are written based on single thread system, thus if using drivers on multithread platform take that into consideration. Furhtermore both drivers were tested on signle and multi threaded system (testing on STM32F746ZQ & FreeRTOS v10.2.1 ).
 - SPI interface with display and touch controler is blocking in nature (DMA will be implemented in future)
 - Two separate SPI peripheral is used (combining SPI bus will be implemented in future)
 - Due to serial interface fast drawing to display cannot be achieved, thus applications using that kind of display/driver is limited in refresh speed of screen
+
 
 
 ## TOUCH CALIBRATION ROUTINE
