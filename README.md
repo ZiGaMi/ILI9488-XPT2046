@@ -117,17 +117,103 @@ Calibration routine is based on three points and takes care of three errors: sca
 ```
 
 
-## GRAPHICS
+## DISPLAY API
 
-### Rectange
+### Rectange drawing
+Driver supports four types of rectangle: simple, simple with border, rounded and rounded with border. Before drawing rectangle attributes must be determine first. Examples of all four types of rectangles are demonstrated bellow:
 
-### Circle
+```
+  // Rectangle attributes
+  ili9488_rect_attr_t rect_attr;
 
-## TEXT
+  // -------------------------------------------
+  //	RECTANGLE DRAWINGS
+  // -------------------------------------------
 
-### String type
+  // 1. Simple filled rectangle
+  rect_attr.position.start_page = 50;
+  rect_attr.position.start_col  = 10;
+  rect_attr.position.page_size  = 100;
+  rect_attr.position.col_size   = 50;
 
-### Formated string type
+  rect_attr.rounded.enable      = false;
+  rect_attr.rounded.radius      = 0;
+
+  rect_attr.fill.enable         = true;
+  rect_attr.fill.color          = eILI9488_COLOR_BLUE;
+
+  rect_attr.border.enable       = false;
+  rect_attr.border.width        = 0;
+  rect_attr.border.color        = eILI9488_COLOR_BLACK;
+
+  ili9488_draw_rectangle( &rect_attr );
+
+
+  // 2. Simple with border rectangle
+  rect_attr.position.start_page = 270;
+  rect_attr.position.start_col  = 10;
+  rect_attr.position.page_size  = 100;
+  rect_attr.position.col_size   = 50;
+
+  rect_attr.rounded.enable      = false;
+  rect_attr.rounded.radius      = 0;
+
+  rect_attr.fill.enable         = true;
+  rect_attr.fill.color          = eILI9488_COLOR_BLUE;
+
+  rect_attr.border.enable       = true;
+  rect_attr.border.width        = 8;
+  rect_attr.border.color        = eILI9488_COLOR_WHITE;
+
+  ili9488_draw_rectangle( &rect_attr );
+
+
+  // 3. Round filled rectangle
+  rect_attr.position.start_page = 50;
+  rect_attr.position.start_col  = 150;
+  rect_attr.position.page_size  = 100;
+  rect_attr.position.col_size   = 140;
+
+  rect_attr.rounded.enable      = true;
+  rect_attr.rounded.radius      = 9;
+
+  rect_attr.fill.enable         = true;
+  rect_attr.fill.color          = eILI9488_COLOR_PURPLE;
+
+  rect_attr.border.enable       = false;
+  rect_attr.border.width        = 0;
+  rect_attr.border.color        = eILI9488_COLOR_BLACK;
+
+  ili9488_draw_rectangle( &rect_attr );
+
+
+  // 4. Round with border rectangle
+  rect_attr.position.start_page = 270;
+  rect_attr.position.start_col  = 150;
+  rect_attr.position.page_size  = 50;
+  rect_attr.position.col_size   = 75;
+
+  rect_attr.rounded.enable      = true;
+  rect_attr.rounded.radius      = 13;
+
+  rect_attr.fill.enable         = true;
+  rect_attr.fill.color          = eILI9488_COLOR_RED;
+
+  rect_attr.border.enable       = true;
+  rect_attr.border.width        = 3;
+  rect_attr.border.color        = eILI9488_COLOR_YELLOW;
+
+  ili9488_draw_rectangle( &rect_attr );
+```
+
+
+### Circle drawing
+
+### Text drawing
+
+#### String type
+
+#### Formated string type
 
 
 
