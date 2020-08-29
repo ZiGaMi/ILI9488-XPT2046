@@ -455,10 +455,23 @@ Driver support also formated string drawing. Similar as drawing a string first s
 **NOTE: Formated string uses sprintf, thus use it with care!**
 
 ### Backlight brigthness
-TODO: ...
+Set up display backlight brigthness.
+- Function:
+```
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Set up display backlight
+  *
+  *	param: 		brightness 	- Brightness value from 0.0 - 1.0
+  *	return:		status 		- Status of operation
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_set_backlight(const float32_t brightness)
+```
 
-
-# GENERAL TODO: 
-- push latest drivers changes 
-
+- Example:
+```
+  // Set 90% of full brigtness
+  ili9488_low_if_set_led( 0.9f );
+```
 
