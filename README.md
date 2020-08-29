@@ -1,9 +1,9 @@
 # ILI9488-XPT2046
-Display driver for 3.5" SPI TFT 480x320 with resistive touch. Featuring two chips, ILI9488 (display controler) and XPT2046 (touch controler). Written and tested on STM32F746 Nucleo board, using STM32CubeIDE. 
+Simplest display driver for 3.5" SPI TFT 480x320 with resistive touch. Featuring two chips, ILI9488 (display controler) and XPT2046 (touch controler). Written and tested on STM32F746 Nucleo board, using STM32CubeIDE. 
 
 ## USAGE
 ### 1. Setting up configurations
-Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_config.h** file. In there GPIOs, display orientation, font usage, timer peripheral usage, calibration routine    setup and option for debug mode can be change.
+Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_config.h** file. In there GPIOs, display orientation, font usage, timer/spi peripheral usage, calibration routine    setup and option for debug mode can be change.
 
 ##### NOTE: When debug mode is enabled user shall provide debug communication port by the choise!
 
@@ -27,7 +27,7 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 ```
 
 #### Gluing SPI functions to low level driver
-- Linking user SPI functions to drivers low level functions is done via function pointers. As seen from ili9488_low_if.c file:
+- Linking user SPI functions to drivers low level functions is done via function pointers. As seen from **ili9488_low_if.c** file:
 ```
 // Pointer to SPI functions
 // NOTE: 	User shall connect to these two variables SPI
@@ -38,7 +38,7 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
 ```
 
 ### 3. Includes
-  Only top level modules are needed, thus two includes shall be provided by user:
+  Only top level modules are needed, therefore two includes shall be provided. E.g.:
 ```
   #include "ili9488.h"
   #include "xpt2046.h"
@@ -60,25 +60,22 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
   }
 ```
 
-### 5. Touch handler
+### 5. Handle touch
 - Touch controler (xpt2046) need to be handle every x ms in order to preserve real-time behaviour. Thus calling **xpt2046_hndl()** every x ms is mandatory.
-- Display controler (ili9488) does not have any handler
+- On the other hand display controler (ili9488) does apply any handler. For drawing onto display simple call of graphic function (after initialization) will result in displaying symbols. 
+
+- Example of touch handling invocation:
 
 ```
-  // Touch variables
-  uint16_t x_pos;
-  uint16_t y_pos;
-  uint16_t force;
-  bool touch;
-
   // Touch task or simple main loop
-  @every 10 ms
+  @every x ms
   {
     // Handle touch controller
     xpt2046_hndl();
   }
 ```
-- Access touch data via **xpt2046_get_touch(...)** function. This function only returns values from local data and doesn't interface with touch controller itself.
+- Access touch data via **xpt2046_get_touch()** function. This function only returns values from local data and doesn't interface with touch controller itself.
+- Example of reading touch data:
 ```
   // Touch variables
   uint16_t x_pos;
@@ -92,12 +89,12 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
 
 
 ## CONSTRAINS
-- Both drivers are written using ST HAL libraries and thus suitable only for STM32. For other platforms only low level layer shall be change (gpio, spi and timer for pwm).
-- For know low level SPI interface must be provided by user, unless using STM32 HAL libraries
+- Both drivers are written using ST HAL libraries and thus suitable only for STM32. For other platforms only low level layer shall be change (gpio, spi and timer).
+- For know low level SPI interface must be provided by user, unless using STM32 HAL libraries.
 - Both drivers are written based on single thread system, thus if using drivers on multithread platform take that into consideration. Furhtermore both drivers were tested on signle and multi threaded system (testing on STM32F746ZQ & FreeRTOS v10.2.1 ).
-- SPI interface with display and touch controler is blocking in nature (DMA will be implemented in future)
-- Two separate SPI peripheral is used (combining SPI bus will be implemented in future)
-- Due to serial interface fast drawing to display cannot be achieved, thus applications using that kind of display/driver is limited in refresh speed of screen
+- SPI interface with display and touch controler is blocking in nature (DMA will be implemented in future).
+- Two separate SPI peripheral is used for each driver (combining SPI bus will be implemented in future).
+- Due to serial interface, fast drawing to display cannot be achieved, thus applications using that kind of display/driver is limited in refresh speed of screen.
 
 
 
@@ -109,11 +106,66 @@ Calibration routine is based on three points and takes care of three errors: sca
 ```
   xpt2046_start_calibration();
 ```
+**NOTE: Before starting calibration routine, make sure that driver is initialize and handled!**
+
 2. Touch points on display 
 3. Store calibration factors into power independent memory. Factors can be access as shown bellow:
 ```
   int32_t factors[7];
   xpt2046_get_cal_factors( &factors );
+```
+
+### Example of handling touch calibration
+
+```
+  int main()
+  {
+    // System initialization...
+
+    // First initialize both drivers
+    ili9488_init();
+    xpt2046_init();
+
+    // Check if calibration is done
+    display_cal_already_done = nvm_read_is_cal_done();
+
+    // In case that calibration has been done, 
+    // load calibration factors from NVM and
+    // set it to touch driver
+    if ( display_cal_already_done )
+    {
+      int32_t factors[7];
+      nvm_read_display_factors( &factors );
+      xpt2046_set_cal_factors( &factors );
+    }
+
+    // In other case calibration is missing -> start calibration
+    else
+    {
+      xpt2046_start_calibration();
+    }
+    
+    // Main loop
+    while (1)
+    { 
+      @every x ms
+      {
+        xpt2046_hndl();
+      }
+      
+      // When calibration is done, store it to NVM
+      @calibration_done
+      {
+        int32_t factors[7];
+        xpt2046_get_cal_factors( &factors );
+        nvm_write_display_factors( &factors );
+      }
+      
+      // Other magic...
+    }
+  
+  }
+
 ```
 
 
@@ -140,7 +192,20 @@ typedef enum
 ```
 
 ### Background set
-Set display background color.
+- Function:
+``` 
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Set display background
+  *
+  *	param:		color - Color of background
+  *	return:		status - Status of operation
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_set_background(const ili9488_color_t color)
+```
+
+- Example:
 
 ``` 
   // Set black background 
@@ -149,6 +214,21 @@ Set display background color.
 
 ### Rectange drawing
 Driver supports four types of rectangle: simple, simple with border, rounded and rounded with border. Before drawing rectangle attributes must be determine first. Examples of all four types of rectangles are demonstrated bellow:
+
+- Function:
+```
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Draw rectangle
+  *
+  *	param:		p_rectanegle_attr - Pointer to rectangle attributes
+  *	return:		status 	- Status of operation
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_draw_rectangle(const ili9488_rect_attr_t * const p_rectanegle_attr)
+```
+
+- Example:
 
 ```
   // Rectangle attributes
@@ -238,6 +318,21 @@ Driver supports four types of rectangle: simple, simple with border, rounded and
 ### Circle drawing
 Driver supports two kinds of circle drawings: simple and with border. Similar to rectangle drawing, attributes for circle must first be set. Both types of circle drawing is given bellow: 
 
+- Function:
+```
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Draw circle
+  *
+  *	param: 		p_circle_attr 	- Pointer to circle attributes
+  *	return:		status 			- Status of operation
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_draw_circle(const ili9488_circ_attr_t * const p_circle_attr)
+```
+
+- Example:
+
 ```
   // Circle attributes
   ili9488_circ_attr_t circ_attr;
@@ -279,6 +374,35 @@ Driver supports two kinds of circle drawings: simple and with border. Similar to
 ### String drawing
 For drawing string to display first string pen shall be set. String pen define foreground, background color of string and font. Five different in size fonts are available to use, from 8pt to 24pt height.
 
+- Function:
+```
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Set string pen
+  *
+  *	param:		fg_color - Foreground color
+  *	param:		bg_color - Background color
+  *	param:		font_opt - Font of choise
+  *	return:		status - Always OK
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_set_string_pen(const ili9488_color_t fg_color, const ili9488_color_t bg_color, const ili9488_font_opt_t font_opt)
+
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Display string
+  *
+  *	param:		str - String to display
+  *	param:		page - Start page
+  *	param:		col - Start column
+  *	return:		status - Either Ok or Error
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_set_string(const char* str, const uint16_t page, const uint16_t col)
+```
+
+- Example:
+
 ```
   // Set string pen
   ili9488_set_string_pen( eILI9488_COLOR_RED, eILI9488_COLOR_WHITE, eILI9488_FONT_20 );
@@ -290,6 +414,33 @@ For drawing string to display first string pen shall be set. String pen define f
 
 ### Formated string drawing
 Driver support also formated string drawing. Similar as drawing a string first string pen must be set and also cursor. Cursor define start coordinates of formated string.
+
+- Function:
+
+```
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Set cursor for printf functionality
+  *
+  *	param:		page 	- Cursor page (x) coordinate
+  *	param:		col 	- Cursor column (y) coordinate
+  *	return:		status 	- Status of operation
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_set_cursor(const uint16_t page, const uint16_t col)
+
+  //////////////////////////////////////////////////////////////
+  /*
+  *			Print formated string to display
+  *
+  *	param:		format - Formated string
+  *	return:		status 	- Status of operation
+  */
+  //////////////////////////////////////////////////////////////
+  ili9488_status_t ili9488_printf(const char *format, ...)
+```
+
+- Example:
 
 ```	
   // Set string pen
