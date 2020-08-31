@@ -1,4 +1,4 @@
-# ILI9488-XPT2046
+# ILI9488-XPT2046 FOR STM32 PLATFORM
 Simplest display driver for 3.5" SPI TFT 480x320 with resistive touch. Featuring two chips, ILI9488 (display controler) and XPT2046 (touch controler). Written and tested on STM32F746 Nucleo board, using STM32CubeIDE. 
 
 ## USAGE
@@ -8,34 +8,9 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 ##### NOTE: When debug mode is enabled user shall provide debug communication port by the choise!
 
 ### 2. Low level interface
-- User shall provide low level SPI interface, with predefined functions form and glued it to low level interface modules of drivers. There are two functions for each driver that shall be provided: **spi_transmit** and **spi_receive**.
 
-#### Function forms
-```
-  // SPI receive number of bytes
-  spi_status_t spi_receive(uint8_t * p_rx, const uint32_t size);
-  
-  // SPI transmit number of bytes
-  spi_status_t spi_transmit(uint8_t * p_tx, const uint32_t size);
-  
-  // Where status is:
-  typedef enum
-  {
-    eSPI_OK = 0,
-    eSPI_ERROR
-  } spi_status_t;
-```
-
-#### Gluing SPI functions to low level driver
-- Linking user SPI functions to drivers low level functions is done via function pointers. As seen from **ili9488_low_if.c** file:
-```
-// Pointer to SPI functions
-// NOTE: 	User shall connect to these two variables SPI
-//			tx/rx function. This makes low level platform
-//			independent.
-static pf_spi_tx_t gpf_spi_transmit = spi_transmit;
-static pf_spi_rx_t gpf_spi_receive = spi_receive;
-```
+- Low level interface is written using STM32 HAL libraries, therefore migrating to any other STM32 microcontroler should be easy by changing congif files (step 1.)
+- On the other hand if using different platform some additional work must be done. This is down side of drivers and will be improved in future.
 
 ### 3. Includes
   Only top level modules are needed, therefore two includes shall be provided. E.g.:
@@ -99,8 +74,10 @@ static pf_spi_rx_t gpf_spi_receive = spi_receive;
 
 
 ## TOUCH CALIBRATION ROUTINE
-Display features also resistive touch and in case of need, calibration routine is mandatory. 
-Calibration routine is based on three points and takes care of three errors: scale, offset and rotation. 
+- Display features also resistive touch and in case of need, calibration routine is mandatory. 
+- Calibration routine is based on three points and takes care of three errors: scale, offset and rotation. 
+- **IMPORTANT: During calibration routine display functions are called (in order to draw calibration points), therefore initialization of display driver must be done !!!**
+
 ### Steps of calibration
 1. Initiate calibration by calling following function:
 ```
@@ -452,6 +429,7 @@ Driver support also formated string drawing. Similar as drawing a string first s
   // Draw formated string
   ili9488_printf( "%d", HAL_GetTick() );
 ```
+Printf function support also linebreak ('\n' or '\r')
 **NOTE: Formated string uses sprintf, thus use it with care!**
 
 ### Backlight brigthness
@@ -474,4 +452,6 @@ Set up display backlight brigthness.
   // Set 90% of full brigtness
   ili9488_low_if_set_led( 0.9f );
 ```
+
+- NOTE: In case that there is no need for displaying anything at initialization time, startup value of brightness can be changed in ili9488_config.h file (look at ILI9488_LED_STARTUP_VAL)
 
