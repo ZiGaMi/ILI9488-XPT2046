@@ -79,12 +79,6 @@ ili9488_status_t ili9488_init(void)
 {
 	ili9488_status_t status = eILI9488_OK;
 
-	// TODO: Here SPI shall be initialize or checked if initialize
-
-
-	// Init PWM LED timer
-	//status |= ili9488_low_if_init_led_timer();
-
 	// Display init procedure
 	if ( eILI9488_OK != ili9488_driver_init() )
 	{
@@ -179,7 +173,7 @@ ili9488_status_t ili9488_set_string(const char* str, const uint16_t page, const 
 
 	if ( true == gb_is_init )
 	{
-		status |= ili9488_driver_set_string( str, page, col, g_stringPen.fg_color, g_stringPen.bg_color, g_stringPen.font_opt );
+		status = ili9488_driver_set_string( str, page, col, g_stringPen.fg_color, g_stringPen.bg_color, g_stringPen.font_opt );
 	}
 	else
 	{

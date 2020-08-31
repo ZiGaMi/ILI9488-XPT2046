@@ -806,11 +806,12 @@ static ili9488_rgb_t ili9488_driver_convert_color_to_rgb(const ili9488_color_t c
 			break;
 
 		default:
-			ILI9488_DBG_PRINT( "Invalid color selection..." );
-			ILI9488_ASSERT( 0 );
 			rgb.R = 0x00U;
 			rgb.G = 0x00U;
 			rgb.B = 0x00U;
+
+			ILI9488_DBG_PRINT( "Invalid color selection..." );
+			ILI9488_ASSERT( 0 );
 			break;
 	}
 

@@ -17,7 +17,6 @@
 #include "stdint.h"
 #include "stdbool.h"
 
-// Definiton of float32_t
 
 //////////////////////////////////////////////////////////////
 //	DEFINITIONS
