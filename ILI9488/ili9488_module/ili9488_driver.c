@@ -63,54 +63,61 @@ ili9488_status_t ili9488_driver_init(void)
 {
 	ili9488_status_t status = eILI9488_OK;
 
-	// Set control lines
-	ili9488_low_if_set_reset( eILI9488_RESET_OFF );
-	ili9488_low_if_set_led( 1.0f );
+	// Initialize low level interface
+	if ( eILI9488_OK != ili9488_low_if_init())
+	{
+		status = eILI9488_ERROR;
+	}
+	else
+	{
+		// Set control lines
+		ili9488_low_if_set_reset( eILI9488_RESET_OFF );
 
-	// Set CS
-	HAL_GPIO_WritePin( ILI9488_CS__PORT, ILI9488_CS__PIN, GPIO_PIN_SET );
+		// Set up initial backlight brightness
+		ili9488_low_if_set_led( ILI9488_LED_STARTUP_VAL );
 
-	// Soft Reset
-	status |= ili9488_driver_soft_reset();
-	HAL_Delay( 10 );
+		// Soft Reset
+		status |= ili9488_driver_soft_reset();
+		HAL_Delay( 10 );
 
-	// Positive / Negative GAMMA
-	status |= ili9488_driver_set_pos_gamma();
-	status |= ili9488_driver_set_neg_gamma();
+		// Positive / Negative GAMMA
+		status |= ili9488_driver_set_pos_gamma();
+		status |= ili9488_driver_set_neg_gamma();
 
-	// Power Control
-	status |= ili9488_driver_set_power_control();
+		// Power Control
+		status |= ili9488_driver_set_power_control();
 
-	// Interface pixel format
-	status |= ili9488_driver_set_pixel_format( eILI9488_PIXEL_FORMAT_18_BIT );
+		// Interface pixel format
+		status |= ili9488_driver_set_pixel_format( eILI9488_PIXEL_FORMAT_18_BIT );
 
-	// Interface mode control
-	status |= ili9488_driver_set_interface_mode();
+		// Interface mode control
+		status |= ili9488_driver_set_interface_mode();
 
-	// Frame rate
-	status |= ili9488_driver_set_frame_rate();
+		// Frame rate
+		status |= ili9488_driver_set_frame_rate();
 
-	// Display inversion control
-	status |= ili9488_driver_set_inversion_control();
+		// Display inversion control
+		status |= ili9488_driver_set_inversion_control();
 
-	// Display function control RGB/MCU interface control
-	status |= ili9488_driver_set_function_control();
+		// Display function control RGB/MCU interface control
+		status |= ili9488_driver_set_function_control();
 
-	// Image function
-	status |= ili9488_driver_set_image_function();
+		// Image function
+		status |= ili9488_driver_set_image_function();
 
-	// Exit sleep
-	status |= ili9488_driver_set_sleep_on_off( eILI9488_SLEEP_OFF );
+		// Exit sleep
+		status |= ili9488_driver_set_sleep_on_off( eILI9488_SLEEP_OFF );
 
-	// Display on
-	status |= ili9488_driver_set_display_on_off( eILI9488_DISPLAY_ON );
+		// Display on
+		status |= ili9488_driver_set_display_on_off( eILI9488_DISPLAY_ON );
 
-	// Memory data access control
-	#if ( 0 == ILI9488_DISPLAY_FLIP )
-		status |= ili9488_driver_set_orientation( eILI9488_ORIENTATION_LANDSCAPE );
-	#else
-		status |= ili9488_driver_set_orientation( eILI9488_ORIENTATION_LANDSCAPE_FLIP );
-	#endif
+		// Memory data access control
+		#if ( 0 == ILI9488_DISPLAY_FLIP )
+			status |= ili9488_driver_set_orientation( eILI9488_ORIENTATION_LANDSCAPE );
+		#else
+			status |= ili9488_driver_set_orientation( eILI9488_ORIENTATION_LANDSCAPE_FLIP );
+		#endif
+	}
 
 	return status;
 }

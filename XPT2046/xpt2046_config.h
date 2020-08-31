@@ -33,30 +33,46 @@
 
 
 // **********************************************************
+// 	SPI INTERFACE
+// **********************************************************
+#define XPT2046_SPI						( SPI3 )
+#define XPT2046_SPI_BAUDRATE_PSC		( SPI_BAUDRATEPRESCALER_32 )	// NOTE: Max. SPI clock is 2 MHz
+#define XPT2046_SPI_TIMEOUT_MS			( 10 )	// [ms]
+#define XPT2046_SPI_EN_CLK()			__HAL_RCC_SPI3_CLK_ENABLE()
+
+
+
+// **********************************************************
 // 	GPIO PINS
 // **********************************************************
 
 // SPI pins
-#define ILI9488_SCK__PORT				( GPIOC )
-#define ILI9488_SCK__PIN				( GPIO_PIN_10 )
-#define ILI9488_SCK_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
+#define XPT2046_SCK__PORT				( GPIOC )
+#define XPT2046_SCK__PIN				( GPIO_PIN_10 )
+#define XPT2046_SCK__PULL				( GPIO_NOPULL )
+#define XPT2046_SCK_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
 
-#define ILI9488_MISO__PORT				( GPIOC )
-#define ILI9488_MISO__PIN				( GPIO_PIN_11 )
-#define ILI9488_MISO_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
+#define XPT2046_MISO__PORT				( GPIOC )
+#define XPT2046_MISO__PIN				( GPIO_PIN_11 )
+#define XPT2046_MISO__PULL				( GPIO_NOPULL )
+#define XPT2046_MISO_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
 
-#define ILI9488_MOSI__PORT				( GPIOC )
-#define ILI9488_MOSI__PIN				( GPIO_PIN_12 )
-#define ILI9488_MOSI_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
+#define XPT2046_MOSI__PORT				( GPIOC )
+#define XPT2046_MOSI__PIN				( GPIO_PIN_12 )
+#define XPT2046_MOSI__PULL				( GPIO_NOPULL )
+#define XPT2046_MOSI_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
 
 #define XPT2046_CS__PORT				( GPIOC )
 #define XPT2046_CS__PIN					( GPIO_PIN_9 )
+#define XPT2046_CS__PULL				( GPIO_NOPULL )
 #define XPT2046_CS_CLK_EN()				__HAL_RCC_GPIOC_CLK_ENABLE()
 
 // Interrupt line
 #define XPT2046_INT__PORT				( GPIOC )
 #define XPT2046_INT__PIN				( GPIO_PIN_8 )
+#define XPT2046_INT__PULL				( GPIO_NOPULL )
 #define XPT2046_INT_CLK_EN()			__HAL_RCC_GPIOC_CLK_ENABLE()
+
 
 
 

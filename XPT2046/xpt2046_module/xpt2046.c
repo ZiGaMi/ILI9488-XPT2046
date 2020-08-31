@@ -183,9 +183,11 @@ xpt2046_status_t xpt2046_init(void)
 {
 	xpt2046_status_t status = eXPT2046_OK;
 
-	// Initialize SPI
-	// TODO: ....
-	HAL_GPIO_WritePin( XPT2046_CS__PORT, XPT2046_CS__PIN, GPIO_PIN_SET );
+	// Initialize GPIOs & SPI
+	if ( eXPT2046_OK != xpt2046_low_if_init())
+	{
+		status = eXPT2046_ERROR;
+	}
 
 	// Initialize FSM
 	g_cal_fsm.state.cur = eXPT2046_FSM_NORMAL;
@@ -839,6 +841,20 @@ void xpt2046_set_cal_factors(const int32_t * const p_factors)
 
 	// Copy factors
 	memcpy( &g_cal_data.factors, p_factors, sizeof( g_cal_data.factors ));
+}
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			Get calibration factors
+*
+*	param:		p_factors - Pointer to factors
+*	return:		none
+*/
+//////////////////////////////////////////////////////////////
+void xpt2046_get_cal_factors(const int32_t * p_factors)
+{
+	p_factors = (int32_t*) &g_cal_data.factors;
 }
 
 

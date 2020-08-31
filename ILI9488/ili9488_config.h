@@ -29,39 +29,55 @@
 
 
 // **********************************************************
+// 	SPI INTERFACE
+// **********************************************************
+#define ILI9488_SPI						( SPI1 )
+#define ILI9488_SPI_BAUDRATE_PSC		( SPI_BAUDRATEPRESCALER_4 )		// NOTE: Max. SPI clock is 20 MHz
+#define ILI9488_SPI_TIMEOUT_MS			( 10 )	// [ms]
+#define ILI9488_SPI_EN_CLK()			__HAL_RCC_SPI1_CLK_ENABLE()
+
+
+// **********************************************************
 // 	GPIO PINS
 // **********************************************************
 
 // SPI pins
 #define ILI9488_SCK__PORT				( GPIOA )
 #define ILI9488_SCK__PIN				( GPIO_PIN_5 )
+#define ILI9488_SCK__PULL				( GPIO_NOPULL )
 #define ILI9488_SCK_CLK_EN()			__HAL_RCC_GPIOA_CLK_ENABLE()
 
 #define ILI9488_MISO__PORT				( GPIOA )
 #define ILI9488_MISO__PIN				( GPIO_PIN_6 )
+#define ILI9488_MISO__PULL				( GPIO_NOPULL )
 #define ILI9488_MISO_CLK_EN()			__HAL_RCC_GPIOA_CLK_ENABLE()
 
 #define ILI9488_MOSI__PORT				( GPIOA )
 #define ILI9488_MOSI__PIN				( GPIO_PIN_7 )
+#define ILI9488_MOSI__PULL				( GPIO_NOPULL )
 #define ILI9488_MOSI_CLK_EN()			__HAL_RCC_GPIOA_CLK_ENABLE()
 
 #define ILI9488_CS__PORT				( GPIOF )
 #define ILI9488_CS__PIN					( GPIO_PIN_12 )
+#define ILI9488_CS__PULL				( GPIO_NOPULL )
 #define ILI9488_CS_CLK_EN()				__HAL_RCC_GPIOF_CLK_ENABLE()
 
 // LCD Reset line
 #define ILI9488_RESET__PORT				( GPIOD )
 #define ILI9488_RESET__PIN				( GPIO_PIN_14 )
+#define ILI9488_RESET__PULL				( GPIO_NOPULL )
 #define ILI9488_RESET_CLK_EN()			__HAL_RCC_GPIOD_CLK_ENABLE()
 
 // Data/Command line
 #define ILI9488_DC__PORT				( GPIOD )
 #define ILI9488_DC__PIN					( GPIO_PIN_15 )
+#define ILI9488_DC__PULL				( GPIO_NOPULL )
 #define ILI9488_DC_CLK_EN()				__HAL_RCC_GPIOD_CLK_ENABLE()
 
 // LED
 #define ILI9488_LED__PORT				( GPIOB )
 #define ILI9488_LED__PIN				( GPIO_PIN_4 )
+#define ILI9488_LED__PULL				( GPIO_NOPULL )
 #define ILI9488_LED_CLK_EN()			__HAL_RCC_GPIOB_CLK_ENABLE()
 
 
@@ -116,6 +132,9 @@
 // According to measurements 200Hz produce best results
 // Additionally capacitors were places on VCC (100uF tantalum, 4uF & 100nF ceramic)
 #define ILI9488_LED_TIMER_FREQ_HZ		( 200 ) // [Hz]
+
+// Start-up brightness (0.0f - 1.0f)
+#define ILI9488_LED_STARTUP_VAL			( 1.0f )
 
 // **********************************************************
 // 	DEBUG COM PORT

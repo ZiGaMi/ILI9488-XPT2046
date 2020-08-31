@@ -63,12 +63,13 @@ typedef struct
 //////////////////////////////////////////////////////////////
 // FUNCTIONS PROTOTYPES
 //////////////////////////////////////////////////////////////
+ili9488_status_t 	ili9488_low_if_init					(void);
 ili9488_status_t 	ili9488_low_if_write_register		(const ili9488_cmd_t cmd, const uint8_t * const tx_data, const uint32_t size);
 ili9488_status_t 	ili9488_low_if_read_register		(const ili9488_cmd_t cmd, uint8_t * const rx_data, const uint32_t size);
 ili9488_status_t 	ili9488_low_if_write_rgb_to_gram 	(const ili9488_rgb_t * const p_rgb, const uint32_t size);
 void 				ili9488_low_if_set_reset			(const ili9488_reset_t rst);
 ili9488_status_t	ili9488_low_if_set_led				(const float32_t brigthness);
-ili9488_status_t 	ili9488_low_if_init_led_timer		(void);
+
 
 //////////////////////////////////////////////////////////////
 // END OF FILE

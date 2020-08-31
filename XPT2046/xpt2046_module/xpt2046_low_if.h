@@ -69,6 +69,7 @@ typedef enum
 //////////////////////////////////////////////////////////////
 xpt2046_status_t 	xpt2046_low_if_exchange	(const xpt2046_addr_t addr, const xpt2046_pd_t pd_mode, const xpt2046_start_t start, uint16_t * const p_adc_result);
 xpt2046_int_t 		xpt2046_low_if_get_int	(void);
+xpt2046_status_t 	xpt2046_low_if_init		(void);
 
 //////////////////////////////////////////////////////////////
 // END OF FILE

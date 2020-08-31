@@ -15,7 +15,6 @@
 
 #include "ili9488_low_if.h"
 #include "ili9488_config.h"
-#include "spi.h"
 
 
 
@@ -31,9 +30,16 @@
 #define ILI9488_LOW_IF_DC_COMMAND()		( HAL_GPIO_WritePin( ILI9488_DC__PORT, ILI9488_DC__PIN, GPIO_PIN_RESET ))
 #define ILI9488_LOW_IF_DC_DATA()		( HAL_GPIO_WritePin( ILI9488_DC__PORT, ILI9488_DC__PIN, GPIO_PIN_SET ))
 
+// SPI interface status
+typedef enum
+{
+	eILI9488_SPI_OK = 0,
+	eILI9488_SPI_ERROR,
+} ili9488_spi_status_t;
+
 // Spi functions
-typedef spi_status_t (*pf_spi_tx_t) (uint8_t * p_data, const uint32_t size);
-typedef spi_status_t (*pf_spi_rx_t) (uint8_t * p_data, const uint32_t size);
+typedef ili9488_spi_status_t (*pf_spi_tx_t) (const uint8_t * p_data, const uint32_t size);
+typedef ili9488_spi_status_t (*pf_spi_rx_t) (uint8_t * const p_data, const uint32_t size);
 
 
 //////////////////////////////////////////////////////////////
@@ -41,19 +47,61 @@ typedef spi_status_t (*pf_spi_rx_t) (uint8_t * p_data, const uint32_t size);
 //////////////////////////////////////////////////////////////
 
 // Pointer to SPI functions
-// NOTE: 	User shall connect to these two variables SPI
-//			tx/rx function. This makes low level platform
-//			independent.
-static pf_spi_tx_t gpf_spi_transmit = spi_transmit;
-static pf_spi_rx_t gpf_spi_receive = spi_receive;
+static pf_spi_tx_t gpf_spi_transmit;
+static pf_spi_rx_t gpf_spi_receive;
 
 // LED PWM timer
 static TIM_HandleTypeDef gh_led_timer;
+
+// SPI handler
+static SPI_HandleTypeDef gh_display_spi;
+
+
+//////////////////////////////////////////////////////////////
+// FUNCTION PROTOTYPES
+//////////////////////////////////////////////////////////////
+static void				ili9488_low_if_gpio_init	(void);
+static ili9488_status_t ili9488_low_if_timer_init	(void);
+static ili9488_status_t ili9488_low_if_spi_init		(void);
+
+static ili9488_spi_status_t ili9488_low_if_spi_transmit (const uint8_t * p_data, const uint32_t size);
+static ili9488_spi_status_t ili9488_low_if_spi_receive 	(uint8_t * const p_data, const uint32_t size);
 
 
 //////////////////////////////////////////////////////////////
 // FUNCTIONS 
 //////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			Low level initialization
+*
+*	param: 		none
+*	return:		status 	- Status of operation
+*/
+//////////////////////////////////////////////////////////////
+ili9488_status_t ili9488_low_if_init(void)
+{
+	ili9488_status_t status = eILI9488_OK;
+
+	// Init GPIOS
+	ili9488_low_if_gpio_init();
+
+	// Init timer
+	if ( eILI9488_OK != ili9488_low_if_timer_init())
+	{
+		status |= eILI9488_ERROR;
+	}
+
+	// Init SPI
+	if ( eILI9488_OK != ili9488_low_if_spi_init())
+	{
+		status |= eILI9488_ERROR;
+	}
+
+	return status;
+}
 
 
 //////////////////////////////////////////////////////////////
@@ -75,34 +123,46 @@ ili9488_status_t ili9488_low_if_write_register(const ili9488_cmd_t cmd, const ui
 	ili9488_status_t status = eILI9488_OK;
 	uint8_t command = cmd;
 
-	// Set CS & DC
-	ILI9488_LOW_IF_CS_LOW();
-	ILI9488_LOW_IF_DC_COMMAND();
-
-	// Send command
-	if ( eSPI_OK != gpf_spi_transmit( &command, 1U ))
+	// Check if functions are set
+	if 	(	( NULL == gpf_spi_receive )
+		||	( NULL == gpf_spi_receive ))
 	{
 		status = eILI9488_ERROR;
-	}
 
-	// Command send OK
+		ILI9488_DBG_PRINT( "SPI interface function not set..." );
+		ILI9488_ASSERT( 0 );
+	}
 	else
 	{
-		// In case of parameters send them as well
-		if ( size > 0 )
-		{
-			// Data transmit
-			ILI9488_LOW_IF_DC_DATA();
+		// Set CS & DC
+		ILI9488_LOW_IF_CS_LOW();
+		ILI9488_LOW_IF_DC_COMMAND();
 
-			if ( eSPI_OK != gpf_spi_transmit((uint8_t*) tx_data, size ))
+		// Send command
+		if ( eILI9488_SPI_OK != gpf_spi_transmit( &command, 1U ))
+		{
+			status = eILI9488_ERROR;
+		}
+
+		// Command send OK
+		else
+		{
+			// In case of parameters send them as well
+			if ( size > 0 )
 			{
-				status = eILI9488_ERROR;
+				// Data transmit
+				ILI9488_LOW_IF_DC_DATA();
+
+				if ( eILI9488_SPI_OK != gpf_spi_transmit((uint8_t*) tx_data, size ))
+				{
+					status = eILI9488_ERROR;
+				}
 			}
 		}
-	}
 
-	// Set CS
-	ILI9488_LOW_IF_CS_HIGH();
+		// Set CS
+		ILI9488_LOW_IF_CS_HIGH();
+	}
 
 	return status;
 }
@@ -127,32 +187,44 @@ ili9488_status_t ili9488_low_if_write_rgb_to_gram (const ili9488_rgb_t * const p
 	const uint8_t cmd = eILI9488_WRITE_MEM_CMD;
 	uint32_t i;
 
-	// Set CS & DC
-	ILI9488_LOW_IF_CS_LOW();
-	ILI9488_LOW_IF_DC_COMMAND();
-
-	// Send command
-	if ( eSPI_OK != gpf_spi_transmit((uint8_t*) &cmd, 1U ))
+	// Check if functions are set
+	if 	(	( NULL == gpf_spi_receive )
+		||	( NULL == gpf_spi_receive ))
 	{
 		status = eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "SPI interface function not set..." );
+		ILI9488_ASSERT( 0 );
 	}
 	else
 	{
-		// In case of parameters send them as well
-		if ( size > 0 )
-		{
-			// Data transmit
-			ILI9488_LOW_IF_DC_DATA();
+		// Set CS & DC
+		ILI9488_LOW_IF_CS_LOW();
+		ILI9488_LOW_IF_DC_COMMAND();
 
-			for ( i = 0; i < size; i++ )
+		// Send command
+		if ( eILI9488_SPI_OK != gpf_spi_transmit((uint8_t*) &cmd, 1U ))
+		{
+			status = eILI9488_ERROR;
+		}
+		else
+		{
+			// In case of parameters send them as well
+			if ( size > 0 )
 			{
-				gpf_spi_transmit((uint8_t*) p_rgb, 3U );
+				// Data transmit
+				ILI9488_LOW_IF_DC_DATA();
+
+				for ( i = 0; i < size; i++ )
+				{
+					gpf_spi_transmit((uint8_t*) p_rgb, 3U );
+				}
 			}
 		}
-	}
 
-	// Set CS
-	ILI9488_LOW_IF_CS_HIGH();
+		// Set CS
+		ILI9488_LOW_IF_CS_HIGH();
+	}
 
 	return status;
 }
@@ -175,34 +247,46 @@ ili9488_status_t ili9488_low_if_read_register(const ili9488_cmd_t cmd, uint8_t *
 	ili9488_status_t status = eILI9488_OK;
 	uint8_t command = cmd;
 
-	// Set CS & DC
-	ILI9488_LOW_IF_CS_LOW();
-	ILI9488_LOW_IF_DC_COMMAND();
-
-	// Send command
-	if ( eSPI_OK != gpf_spi_transmit( &command, 1U ))
+	// Check if functions are set
+	if 	(	( NULL == gpf_spi_receive )
+		||	( NULL == gpf_spi_receive ))
 	{
 		status = eILI9488_ERROR;
-	}
 
-	// Command send OK
+		ILI9488_DBG_PRINT( "SPI interface function not set..." );
+		ILI9488_ASSERT( 0 );
+	}
 	else
 	{
-		// In case of parameters send them as well
-		if ( size > 0 )
-		{
-			// Data transmit
-			ILI9488_LOW_IF_DC_DATA();
+		// Set CS & DC
+		ILI9488_LOW_IF_CS_LOW();
+		ILI9488_LOW_IF_DC_COMMAND();
 
-			if ( eSPI_OK != gpf_spi_receive( rx_data, size ))
+		// Send command
+		if ( eILI9488_SPI_OK != gpf_spi_transmit( &command, 1U ))
+		{
+			status = eILI9488_ERROR;
+		}
+
+		// Command send OK
+		else
+		{
+			// In case of parameters send them as well
+			if ( size > 0 )
 			{
-				status = eILI9488_ERROR;
+				// Data transmit
+				ILI9488_LOW_IF_DC_DATA();
+
+				if ( eILI9488_SPI_OK != gpf_spi_receive( rx_data, size ))
+				{
+					status = eILI9488_ERROR;
+				}
 			}
 		}
-	}
 
-	// Set CS
-	ILI9488_LOW_IF_CS_HIGH();
+		// Set CS
+		ILI9488_LOW_IF_CS_HIGH();
+	}
 
 	return status;
 }
@@ -270,7 +354,7 @@ ili9488_status_t ili9488_low_if_set_led(const float32_t brightness)
 *	return:		status 		- Status of operation
 */
 //////////////////////////////////////////////////////////////
-ili9488_status_t ili9488_low_if_init_led_timer(void)
+static ili9488_status_t ili9488_low_if_timer_init(void)
 {
 	ili9488_status_t status = eILI9488_OK;
 
@@ -285,7 +369,7 @@ ili9488_status_t ili9488_low_if_init_led_timer(void)
     // Configure Pins
     GPIO_InitStruct.Pin 			= ILI9488_LED__PIN;
     GPIO_InitStruct.Mode 			= GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull 			= GPIO_NOPULL;
+    GPIO_InitStruct.Pull 			= ILI9488_LED__PULL;
     GPIO_InitStruct.Speed 			= GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate 		= ILI9488_LED_TIMER_ALT_FUNC;
     HAL_GPIO_Init( ILI9488_LED__PORT, &GPIO_InitStruct);
@@ -306,12 +390,18 @@ ili9488_status_t ili9488_low_if_init_led_timer(void)
     if ( HAL_OK != HAL_TIM_ConfigClockSource( &gh_led_timer, &sClockSourceConfig ))
     {
     	status |= eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "Timer init failed! ");
+		ILI9488_ASSERT( 0 );
     }
 
     // Init PWM unit
 	if ( HAL_OK != HAL_TIM_PWM_Init( &gh_led_timer ))
 	{
 		status |= eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "Timer init failed! ");
+		ILI9488_ASSERT( 0 );
 	}
 
 	sConfigOC.OCMode 				= TIM_OCMODE_PWM1;
@@ -326,12 +416,172 @@ ili9488_status_t ili9488_low_if_init_led_timer(void)
 	if ( HAL_OK != HAL_TIM_PWM_ConfigChannel( &gh_led_timer, &sConfigOC, ILI9488_LED_TIMER_CH ))
 	{
 		status |= eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "Timer init failed! ");
+		ILI9488_ASSERT( 0 );
 	}
 
 	// Start Timer
 	if ( HAL_OK != HAL_TIM_PWM_Start( &gh_led_timer, ILI9488_LED_TIMER_CH ))
 	{
 		status |= eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "Timer init failed! ");
+		ILI9488_ASSERT( 0 );
+	}
+
+	return status;
+}
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			Initialize GPIO
+*
+*	param: 		none
+*	return:		none
+*/
+//////////////////////////////////////////////////////////////
+static void	ili9488_low_if_gpio_init(void)
+{
+	GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+	// Enable clock
+	ILI9488_SCK_CLK_EN();
+	ILI9488_MOSI_CLK_EN();
+	ILI9488_MISO_CLK_EN();
+	ILI9488_CS_CLK_EN();
+	ILI9488_RESET_CLK_EN();
+	ILI9488_DC_CLK_EN();
+
+	// SPI pins
+    GPIO_InitStruct.Pin 		= ILI9488_SCK__PIN;
+    GPIO_InitStruct.Mode 		= GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull 		= ILI9488_SCK__PULL;
+    GPIO_InitStruct.Speed 		= GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate 	= GPIO_AF6_SPI3;
+    HAL_GPIO_Init( ILI9488_SCK__PORT, &GPIO_InitStruct );
+
+    GPIO_InitStruct.Pin 		= ILI9488_MOSI__PIN;
+    GPIO_InitStruct.Mode 		= GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull 		= ILI9488_MOSI__PULL;
+    GPIO_InitStruct.Speed 		= GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate 	= GPIO_AF6_SPI3;
+    HAL_GPIO_Init( ILI9488_MOSI__PORT, &GPIO_InitStruct );
+
+    GPIO_InitStruct.Pin 		= ILI9488_MISO__PIN;
+    GPIO_InitStruct.Mode 		= GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull 		= ILI9488_MISO__PULL;
+    GPIO_InitStruct.Speed 		= GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate 	= GPIO_AF6_SPI3;
+    HAL_GPIO_Init( ILI9488_MISO__PORT, &GPIO_InitStruct );
+
+	// CS pin
+	GPIO_InitStruct.Pin			= ILI9488_CS__PIN;
+	GPIO_InitStruct.Mode		= GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull		= ILI9488_CS__PULL;
+	GPIO_InitStruct.Speed		= GPIO_SPEED_MEDIUM;
+	HAL_GPIO_Init( ILI9488_CS__PORT, &GPIO_InitStruct );
+	ILI9488_LOW_IF_CS_HIGH();
+
+	// RESET pin
+	GPIO_InitStruct.Pin			= ILI9488_RESET__PIN;
+	GPIO_InitStruct.Mode		= GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull		= ILI9488_RESET__PULL;
+	GPIO_InitStruct.Speed		= GPIO_SPEED_MEDIUM;
+	HAL_GPIO_Init( ILI9488_CS__PORT, &GPIO_InitStruct );
+	ILI9488_LOW_IF_CS_HIGH();
+}
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			Initialize SPI interface
+*
+*	param: 		none
+*	return:		status - Status of operation
+*/
+//////////////////////////////////////////////////////////////
+static ili9488_status_t ili9488_low_if_spi_init	(void)
+{
+	ili9488_status_t status = eILI9488_OK;
+
+	// Enable clock
+	ILI9488_SPI_EN_CLK();
+
+	// Init SPI
+	gh_display_spi.Instance 				= ILI9488_SPI;
+	gh_display_spi.Init.Mode 				= SPI_MODE_MASTER;
+	gh_display_spi.Init.Direction 			= SPI_DIRECTION_2LINES;
+	gh_display_spi.Init.DataSize 			= SPI_DATASIZE_8BIT;
+	gh_display_spi.Init.CLKPolarity 		= SPI_POLARITY_LOW;
+	gh_display_spi.Init.CLKPhase 			= SPI_PHASE_1EDGE;
+	gh_display_spi.Init.NSS 				= SPI_NSS_SOFT;
+	gh_display_spi.Init.BaudRatePrescaler	= ILI9488_SPI_BAUDRATE_PSC;
+	gh_display_spi.Init.FirstBit 			= SPI_FIRSTBIT_MSB;
+	gh_display_spi.Init.TIMode 				= SPI_TIMODE_DISABLE;
+	gh_display_spi.Init.CRCCalculation 		= SPI_CRCCALCULATION_DISABLE;
+	gh_display_spi.Init.CRCPolynomial 		= 7;
+	gh_display_spi.Init.CRCLength 			= SPI_CRC_LENGTH_DATASIZE;
+	gh_display_spi.Init.NSSPMode 			= SPI_NSS_PULSE_ENABLE;
+
+	if ( HAL_OK != HAL_SPI_Init( &gh_display_spi ))
+	{
+		status = eILI9488_ERROR;
+		gpf_spi_receive = NULL;
+		gpf_spi_transmit = NULL;
+
+		ILI9488_DBG_PRINT( "Touch SPI init failed! ");
+		ILI9488_ASSERT( 0 );
+	}
+	else
+	{
+		gpf_spi_receive = &ili9488_low_if_spi_receive;
+		gpf_spi_transmit = &ili9488_low_if_spi_transmit;
+	}
+
+	return status;
+}
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			SPI tranmit
+*
+*	param: 		p_data 	- Pointer to trasmited data
+*	param: 		size 	- Size of transmited data in bytes
+*	return:		status 	- Status of operation
+*/
+//////////////////////////////////////////////////////////////
+static ili9488_spi_status_t ili9488_low_if_spi_transmit(const uint8_t * p_data, const uint32_t size)
+{
+	ili9488_spi_status_t status = eILI9488_OK;
+
+	if ( HAL_OK != HAL_SPI_Transmit( &gh_display_spi, (uint8_t*) p_data, size, ILI9488_SPI_TIMEOUT_MS ))
+	{
+		status = eILI9488_ERROR;
+	}
+
+	return status;
+}
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			SPI receive
+*
+*	param: 		p_data 	- Pointer to receive data
+*	param: 		size 	- Size of receive data in bytes
+*	return:		status 	- Status of operation
+*/
+//////////////////////////////////////////////////////////////
+static ili9488_spi_status_t ili9488_low_if_spi_receive(uint8_t * const p_data, const uint32_t size)
+{
+	ili9488_spi_status_t status = eILI9488_OK;
+
+	if ( HAL_OK != HAL_SPI_Receive( &gh_display_spi, (uint8_t*) p_data, size, ILI9488_SPI_TIMEOUT_MS ))
+	{
+		status = eILI9488_ERROR;
 	}
 
 	return status;

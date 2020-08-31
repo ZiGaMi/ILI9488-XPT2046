@@ -7,12 +7,6 @@
 //
 //////////////////////////////////////////////////////////////
 
-// TODO LIST:
-/*
- * 		3. Optimize character printing
- * 		4. Display brightness handling
- */
-
 //////////////////////////////////////////////////////////////
 //	INCLUDES
 //////////////////////////////////////////////////////////////
@@ -57,7 +51,7 @@ static ili9488_pen_t g_stringPen;
 static ili9488_cursor_t g_stringCursor;
 
 // Module initialized
-static bool gb_is_init = false;
+static bool gb_is_init;
 
 
 //////////////////////////////////////////////////////////////
@@ -89,11 +83,12 @@ ili9488_status_t ili9488_init(void)
 
 
 	// Init PWM LED timer
-	status |= ili9488_low_if_init_led_timer();
+	//status |= ili9488_low_if_init_led_timer();
 
 	// Display init procedure
 	if ( eILI9488_OK != ili9488_driver_init() )
 	{
+		gb_is_init = false;
 		status = eILI9488_ERROR;
 	}
 	else
@@ -119,7 +114,7 @@ ili9488_status_t ili9488_init(void)
 *			Set display background
 *
 *	param:		color - Color of background
-*	return:		status - Either Ok or Error
+*	return:		status - Status of operation
 */
 //////////////////////////////////////////////////////////////
 ili9488_status_t ili9488_set_background(const ili9488_color_t color)
