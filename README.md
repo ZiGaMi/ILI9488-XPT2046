@@ -2,18 +2,18 @@
 Simplest display driver for 3.5" SPI TFT 480x320 with resistive touch. Featuring two chips, ILI9488 (display controler) and XPT2046 (touch controler). Written and tested on STM32F746 Nucleo board, using STM32CubeIDE. 
 
 ## USAGE
-### 1. Setting up configurations
-Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_config.h** file. In there GPIOs, display orientation, font usage, timer/spi peripheral usage, calibration routine    setup and option for debug mode can be change.
+### 1. Setting up configuration
+Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_config.h** file. GPIOs, display orientation, font usage, timer/spi peripheral usage, calibration routine setup and option for debug mode can be changed there.
 
-##### NOTE: When debug mode is enabled user shall provide debug communication port by the choise!
+##### NOTE: When debug mode is enabled user should provide debug communication port by the choice!
 
 ### 2. Low level interface
 
-- Low level interface is written using STM32 HAL libraries, therefore migrating to any other STM32 microcontroler should be easy by changing congif files (step 1.)
-- On the other hand if using different platform some additional work must be done. This is down side of drivers and will be improved in future.
+- Low level interface is written using STM32 HAL libraries, therefore migrating to any other STM32 microcontroler can be done easily by changing config files (step 1.)
+- On the other hand if using different platform some additional work must be done. This is downside of drivers and will be improved in future.
 
 ### 3. Includes
-  Only top level modules are needed, therefore two includes shall be provided. E.g.:
+  Only top level modules are needed, therefore two includes should be provided. E.g.:
 ```
   #include "ili9488.h"
   #include "xpt2046.h"
@@ -36,8 +36,8 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 ```
 
 ### 5. Handle touch
-- Touch controler (xpt2046) need to be handle every x ms in order to preserve real-time behaviour. Thus calling **xpt2046_hndl()** every x ms is mandatory.
-- On the other hand display controler (ili9488) does apply any handler. For drawing onto display simple call of graphic function (after initialization) will result in displaying symbols. 
+- Touch controler (xpt2046) need to be handled every x ms in order to preserve real-time behaviour. Thus calling **xpt2046_hndl()** every x ms is mandatory.
+- On the other hand display controler (ili9488) doesn't apply any handler. 
 
 - Example of touch handling invocation:
 
@@ -49,7 +49,7 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
     xpt2046_hndl();
   }
 ```
-- Access touch data via **xpt2046_get_touch()** function. This function only returns values from local data and doesn't interface with touch controller itself.
+- Access touch data via **xpt2046_get_touch()** function. This function only returns values from local data and doesn't interface with touch controler itself.
 - Example of reading touch data:
 ```
   // Touch variables
@@ -64,29 +64,33 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 
 
 ## CONSTRAINS
-- Both drivers are written using ST HAL libraries and thus suitable only for STM32. For other platforms only low level layer shall be change (gpio, spi and timer).
-- For know low level SPI interface must be provided by user, unless using STM32 HAL libraries.
-- Both drivers are written based on single thread system, thus if using drivers on multithread platform take that into consideration. Furhtermore both drivers were tested on signle and multi threaded system (testing on STM32F746ZQ & FreeRTOS v10.2.1 ).
-- SPI interface with display and touch controler is blocking in nature (DMA will be implemented in future).
-- Two separate SPI peripheral is used for each driver (combining SPI bus will be implemented in future).
-- Due to serial interface, fast drawing to display cannot be achieved, thus applications using that kind of display/driver is limited in refresh speed of screen.
+- Both drivers are written using ST HAL libraries and thus suitable only for STM32. For other platforms only low level layer should be changed (gpio, spi and timer).
+- Both drivers are written based on single thread system, which should be taken into consideration if using drivers on multithread platform. Furhtermore both drivers were tested on single and multi threaded system (testing on STM32F746ZQ & FreeRTOS v10.2.1 ).
+- SPI interfaces with display and touch controler are blocking (DMA will be implemented in future).
+- Two separate SPI peripherals are used for each driver (combining SPI interfaces will be implemented in future).
+- Due to serial interface, fast drawing to display cannot be achieved, hence applications using that kind of display/driver are limited in refresh speed of screen.
 
 
 
 ## TOUCH CALIBRATION ROUTINE
-- Display features also resistive touch and in case of need, calibration routine is mandatory. 
+- Display features resistive touch and in case of usage, calibration routine is mandatory. 
 - Calibration routine is based on three points and takes care of three errors: scale, offset and rotation. 
-- **IMPORTANT: During calibration routine display functions are called (in order to draw calibration points), therefore initialization of display driver must be done !!!**
+- **IMPORTANT: During calibration routine display functions are called (in order to draw calibration points), therefore initialization of display driver must be done first!!!**
 
 ### Steps of calibration
-1. Initiate calibration by calling following function:
+1. Initialize drivers:
+```
+  ili9488_init();
+  xpt2046_init();
+```
+2. Initiate calibration by calling following function:
 ```
   xpt2046_start_calibration();
 ```
-**NOTE: Before starting calibration routine, make sure that driver is initialize and handled!**
+**NOTE: Before starting calibration routine, make sure that driver is handled!**
 
-2. Touch points on display 
-3. Store calibration factors into power independent memory. Factors can be access as shown bellow:
+3. Touch points on display 
+4. Store calibration factors into power independent memory. Factors can be accessed as shown below:
 ```
   int32_t factors[7];
   xpt2046_get_cal_factors( &factors );
@@ -189,8 +193,8 @@ typedef enum
   ili9488_set_background( eILI9488_COLOR_BLACK );
 ```
 
-### Rectange drawing
-Driver supports four types of rectangle: simple, simple with border, rounded and rounded with border. Before drawing rectangle attributes must be determine first. Examples of all four types of rectangles are demonstrated bellow:
+### Rectangle drawing
+Driver supports four types of rectangle: simple, simple with border, rounded and rounded with border. Before drawing rectangle attributes must be determined. Examples of all four types of rectangles are demonstrated below:
 
 - Function:
 ```
@@ -293,7 +297,7 @@ Driver supports four types of rectangle: simple, simple with border, rounded and
 
 
 ### Circle drawing
-Driver supports two kinds of circle drawings: simple and with border. Similar to rectangle drawing, attributes for circle must first be set. Both types of circle drawing is given bellow: 
+Driver supports two kinds of circle drawings: simple and with border. Similar to rectangle drawing, attributes for circle must be set first. Both types of circle drawing are shown below: 
 
 - Function:
 ```
@@ -349,7 +353,7 @@ Driver supports two kinds of circle drawings: simple and with border. Similar to
 ```
 
 ### String drawing
-For drawing string to display first string pen shall be set. String pen define foreground, background color of string and font. Five different in size fonts are available to use, from 8pt to 24pt height.
+For drawing string onto display string pen should be set first. String pen defines font, foreground and background color of string. Five different font sizes are available (from 8pt to 24pt).
 
 - Function:
 ```
