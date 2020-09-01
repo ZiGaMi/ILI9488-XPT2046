@@ -394,7 +394,7 @@ For drawing string onto display string pen should be set first. String pen defin
 
 
 ### Formated string drawing
-Driver support also formated string drawing. Similar as drawing a string first string pen must be set and also cursor. Cursor define start coordinates of formated string.
+Driver also supports formated string drawing. Similar as drawing a string first string pen and cursor must be set. Cursor defines initial coordinates of formated string.
 
 - Function:
 
@@ -433,11 +433,11 @@ Driver support also formated string drawing. Similar as drawing a string first s
   // Draw formated string
   ili9488_printf( "%d", HAL_GetTick() );
 ```
-Printf function support also linebreak ('\n' or '\r')
+Printf function also supports linebreak ('\n' or '\r')
 **NOTE: Formated string uses sprintf, thus use it with care!**
 
 ### Backlight brigthness
-Set up display backlight brigthness.
+Display backlight brigthness setup.
 - Function:
 ```
   //////////////////////////////////////////////////////////////
@@ -457,5 +457,5 @@ Set up display backlight brigthness.
   ili9488_low_if_set_led( 0.9f );
 ```
 
-- NOTE: In case that there is no need for displaying anything at initialization time, startup value of brightness can be changed in ili9488_config.h file (look at ILI9488_LED_STARTUP_VAL)
+- NOTE: Startup value of brightness can be changed in ili9488_config.h file (check ILI9488_LED_STARTUP_VAL).
 
