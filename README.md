@@ -454,7 +454,7 @@ Display backlight brigthness setup.
 - Example:
 ```
   // Set 90% of full brigtness
-  ili9488_low_if_set_led( 0.9f );
+  ili9488_set_backlight( 0.9f );
 ```
 
 - NOTE: Startup value of brightness can be changed in ili9488_config.h file (check ILI9488_LED_STARTUP_VAL).
