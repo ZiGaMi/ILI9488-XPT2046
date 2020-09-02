@@ -8,12 +8,6 @@
 //////////////////////////////////////////////////////////////
 
 
-// TODO LIST:
-/*
- * 		1. Apply filter, if needed
- */
-
-
 //////////////////////////////////////////////////////////////
 //	INCLUDES
 //////////////////////////////////////////////////////////////
@@ -139,13 +133,29 @@ ili9488_circ_attr_t g_cal_circ_attr =
 	.fill.enable		= true,
 };
 
+#if ( XPT2046_FILTER_EN )
 
+	// Filter data
+	typedef struct
+	{
+		uint16_t samp_buf[ XPT2046_FILTER_WIN_SAMP ];
+		uint32_t sum;
+	} xpt2046_filt_data_t;
+
+	// Filter objects
+	typedef struct
+	{
+		xpt2046_filt_data_t x;
+		xpt2046_filt_data_t y;
+		xpt2046_filt_data_t force;
+	} xpt2046_filter_t;
+
+#endif
 
 //////////////////////////////////////////////////////////////
 // FUNCTIONS PROTOTYPES
 //////////////////////////////////////////////////////////////
 static void 	xpt2046_read_data_from_controler	(uint16_t * const p_X, uint16_t * const p_Y, uint16_t * const p_force, bool * const p_is_pressed);
-static void 	xpt2046_filter_data					(uint16_t * const p_X, uint16_t * const p_Y, uint16_t * const p_force);
 static void 	xpt2046_calibrate_data				(uint16_t * const p_X, uint16_t * const p_Y, const int32_t * const p_factors);
 static void 	xpt2046_cal_hndl					(void);
 static void 	xpt2046_calculate_factors			(int32_t * p_factors, const xpt2046_point_t * const p_Dp, const xpt2046_point_t * const p_Tp);
@@ -163,7 +173,9 @@ static void xpt2046_fsm_calc_factors	(void);
 static void xpt2046_set_cal_point		(const xpt2046_points_t px);
 static void xpt2046_clear_cal_point		(const xpt2046_points_t px);
 
-
+#if ( XPT2046_FILTER_EN )
+	static void xpt2046_filter_data(uint16_t * const p_X, uint16_t * const p_Y, uint16_t * const p_force, bool * const p_touch);
+#endif
 
 
 //////////////////////////////////////////////////////////////
@@ -243,7 +255,9 @@ void xpt2046_hndl(void)
 	xpt2046_read_data_from_controler( &X, &Y, &force, &is_pressed );
 
 	// Apply filter
-	xpt2046_filter_data( &X, &Y, &force );
+	#if ( XPT2046_FILTER_EN )
+		xpt2046_filter_data( &X, &Y, &force, &is_pressed );
+	#endif
 
 	// Apply calibration
 	if ( g_cal_data.done )
@@ -327,11 +341,60 @@ static void xpt2046_read_data_from_controler(uint16_t * const p_X, uint16_t * co
 *	return:		status - Status of initialization
 */
 //////////////////////////////////////////////////////////////
-static void xpt2046_filter_data(uint16_t * const p_X, uint16_t * const p_Y, uint16_t * const p_force)
+static void xpt2046_filter_data(uint16_t * const p_X, uint16_t * const p_Y, uint16_t * const p_force, bool * const p_touch)
 {
-	// TODO: apply filter
-	// Lowpass RC filter
+	static xpt2046_filter_t filter;
+	static uint8_t samp_cnt = 0;
+	static bool touch_prev;
+	const uint16_t samp_N = XPT2046_FILTER_WIN_SAMP;
+	uint32_t i;
 
+	// New touch detected -> clear old samples
+	if 	(	( true == *p_touch )
+		&& 	( false == touch_prev ))
+	{
+		for ( i = 0; i < samp_N; i++ )
+		{
+			filter.x.samp_buf[i] = *p_X;
+			filter.y.samp_buf[i] = *p_Y;
+			filter.force.samp_buf[i] = *p_force;
+		}
+	}
+
+	// Store touch
+	touch_prev = *p_touch;
+
+	// Fill buffer
+	filter.x.samp_buf[ samp_cnt ] = *p_X;
+	filter.y.samp_buf[ samp_cnt ] = *p_Y;
+	filter.force.samp_buf[ samp_cnt ] = *p_force;
+
+	// Increment sample counter
+	if ( samp_cnt >= samp_N )
+	{
+		samp_cnt = 0;
+	}
+	else
+	{
+		samp_cnt++;
+	}
+
+	filter.x.sum = 0;
+	filter.y.sum = 0;
+	filter.force.sum = 0;
+
+	// Sum
+	for ( i = 0; i < samp_N; i++ )
+	{
+		filter.x.sum += filter.x.samp_buf[i];
+		filter.y.sum += filter.y.samp_buf[i];
+		filter.force.sum += filter.force.samp_buf[i];
+	}
+
+	// Average
+	*p_X = (uint16_t) (filter.x.sum / samp_N );
+	*p_Y = (uint16_t) (filter.y.sum / samp_N );
+	*p_force = (uint16_t) (filter.force.sum / samp_N );
 }
 
 

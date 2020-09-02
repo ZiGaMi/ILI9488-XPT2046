@@ -114,6 +114,16 @@
 #define XPT2046_DISPLAY_MAX_Y			( 320 )
 
 
+// **********************************************************
+// 	TOUCH FILTER (moving average)
+// **********************************************************
+
+// Enable touch filter(0/1)
+#define XPT2046_FILTER_EN				( 1 )
+
+// Filter window in samples
+#define XPT2046_FILTER_WIN_SAMP			( 8 )
+
 
 // **********************************************************
 // 	DEBUG COM PORT
