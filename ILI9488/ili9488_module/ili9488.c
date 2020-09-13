@@ -50,7 +50,7 @@ static ili9488_pen_t g_stringPen;
 // Cursor
 static ili9488_cursor_t g_stringCursor;
 
-// Module initialized
+// Initialization flag
 static bool gb_is_init;
 
 
@@ -79,25 +79,29 @@ ili9488_status_t ili9488_init(void)
 {
 	ili9488_status_t status = eILI9488_OK;
 
-	// Display init procedure
-	if ( eILI9488_OK != ili9488_driver_init() )
+	// Not jet initialized
+	if ( false == gb_is_init )
 	{
-		gb_is_init = false;
-		status = eILI9488_ERROR;
-	}
-	else
-	{
-		gb_is_init = true;
-	}
+		// Display init procedure
+		if ( eILI9488_OK != ili9488_driver_init() )
+		{
+			gb_is_init = false;
+			status = eILI9488_ERROR;
+		}
+		else
+		{
+			gb_is_init = true;
+		}
 
-	// Init string pen
-	g_stringPen.bg_color = eILI9488_COLOR_BLACK;
-	g_stringPen.fg_color = eILI9488_COLOR_WHITE;
-	g_stringPen.font_opt = eILI9488_FONT_16;
+		// Init string pen
+		g_stringPen.bg_color = eILI9488_COLOR_BLACK;
+		g_stringPen.fg_color = eILI9488_COLOR_WHITE;
+		g_stringPen.font_opt = eILI9488_FONT_16;
 
-	// Init string cursor
-	g_stringCursor.page = 0;
-	g_stringCursor.col = 0;
+		// Init string cursor
+		g_stringCursor.page = 0;
+		g_stringCursor.col = 0;
+	}
 
 	return status;
 }
@@ -149,9 +153,19 @@ ili9488_status_t ili9488_set_string_pen(const ili9488_color_t fg_color, const il
 {
 	ili9488_status_t status = eILI9488_OK;
 
-	g_stringPen.fg_color = fg_color;
-	g_stringPen.bg_color = bg_color;
-	g_stringPen.font_opt = font_opt;
+	if ( gb_is_init )
+	{
+		g_stringPen.fg_color = fg_color;
+		g_stringPen.bg_color = bg_color;
+		g_stringPen.font_opt = font_opt;
+	}
+	else
+	{
+		status = eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "Module not initialized!" );
+		ILI9488_ASSERT( 0 );
+	}
 
 	return status;
 }
@@ -214,21 +228,32 @@ ili9488_status_t ili9488_set_cursor(const uint16_t page, const uint16_t col)
 {
 	ili9488_status_t status = eILI9488_OK;
 
-	// Check limits
-	if 	(	( page < ILI9488_DISPLAY_SIZE_PAGE )
-		&& 	( col < ILI9488_DISPLAY_SIZE_PAGE ))
+	// Check if init
+	if ( true == gb_is_init )
 	{
-		g_stringCursor.page = page;
-		g_stringCursor.col = col;
+		// Check limits
+		if 	(	( page < ILI9488_DISPLAY_SIZE_PAGE )
+			&& 	( col < ILI9488_DISPLAY_SIZE_PAGE ))
+		{
+			g_stringCursor.page = page;
+			g_stringCursor.col = col;
+		}
+		else
+		{
+			g_stringCursor.page = 0;
+			g_stringCursor.col = 0;
+
+			status = eILI9488_ERROR;
+
+			ILI9488_DBG_PRINT( "Cursor set invalid coordinates!" );
+			ILI9488_ASSERT( 0 );
+		}
 	}
 	else
 	{
-		g_stringCursor.page = 0;
-		g_stringCursor.col = 0;
-
 		status = eILI9488_ERROR;
 
-		ILI9488_DBG_PRINT( "Cursor set invalid coordinates!" );
+		ILI9488_DBG_PRINT( "Module not initialized!" );
 		ILI9488_ASSERT( 0 );
 	}
 
@@ -330,70 +355,81 @@ ili9488_status_t ili9488_draw_rectangle(const ili9488_rect_attr_t * const p_rect
 	uint8_t border_width;
 	uint8_t radius;
 
-	// Get position data
-	s_page 		= p_rectanegle_attr -> position.start_page;
-	s_col 		= p_rectanegle_attr -> position.start_col;
-	page_size 	= p_rectanegle_attr -> position.page_size;
-	col_size 	= p_rectanegle_attr -> position.col_size;
-
-	// Get color
-	border_color = p_rectanegle_attr -> border.color;
-	fill_color = p_rectanegle_attr -> fill.color;
-
-	// Get border width
-	border_width = p_rectanegle_attr -> border.width;
-
-	// Get radius
-	radius = p_rectanegle_attr -> rounded.radius;
-
-	// Rounded rectangle
-	if ( true == p_rectanegle_attr -> rounded.enable )
+	// Check if init
+	if ( true == gb_is_init )
 	{
-		// Draw Border
-		if ( true == p_rectanegle_attr -> border.enable )
-		{
-			// Fill border
-			status |= ili9488_fill_round_rectangle( s_page, s_col, page_size, col_size, border_color, radius );
+		// Get position data
+		s_page 		= p_rectanegle_attr -> position.start_page;
+		s_col 		= p_rectanegle_attr -> position.start_col;
+		page_size 	= p_rectanegle_attr -> position.page_size;
+		col_size 	= p_rectanegle_attr -> position.col_size;
 
-			// Fill without border
-			status |= ili9488_fill_round_rectangle( s_page + border_width, s_col + border_width, page_size - 2U * border_width, col_size - 2U * border_width, fill_color, radius );
+		// Get color
+		border_color = p_rectanegle_attr -> border.color;
+		fill_color = p_rectanegle_attr -> fill.color;
+
+		// Get border width
+		border_width = p_rectanegle_attr -> border.width;
+
+		// Get radius
+		radius = p_rectanegle_attr -> rounded.radius;
+
+		// Rounded rectangle
+		if ( true == p_rectanegle_attr -> rounded.enable )
+		{
+			// Draw Border
+			if ( true == p_rectanegle_attr -> border.enable )
+			{
+				// Fill border
+				status |= ili9488_fill_round_rectangle( s_page, s_col, page_size, col_size, border_color, radius );
+
+				// Fill without border
+				status |= ili9488_fill_round_rectangle( s_page + border_width, s_col + border_width, page_size - 2U * border_width, col_size - 2U * border_width, fill_color, radius );
+			}
+
+			// Rounded & Filled
+			else if ( true == p_rectanegle_attr -> fill.enable )
+			{
+				status |= ili9488_fill_round_rectangle( s_page, s_col, page_size, col_size, fill_color, radius );
+			}
+
+			else
+			{
+				// No actions...
+			}
 		}
 
-		// Rounded & Filled
-		else if ( true == p_rectanegle_attr -> fill.enable )
-		{
-			status |= ili9488_fill_round_rectangle( s_page, s_col, page_size, col_size, fill_color, radius );
-		}
-
+		// Simple rectangle
 		else
 		{
-			// No actions...
+			// With border
+			if ( true == p_rectanegle_attr -> border.enable )
+			{
+				// Fill border
+				status |= ili9488_fill_rectangle( s_page, s_col, page_size, col_size, border_color );
+
+				// Fill without border
+				status |= ili9488_fill_rectangle( s_page + border_width, s_col + border_width, page_size - ( 2U * border_width ), col_size - ( 2U * border_width ), fill_color );
+			}
+
+			// Filled
+			else if ( true == p_rectanegle_attr -> fill.enable )
+			{
+				status |= ili9488_fill_rectangle( s_page, s_col, page_size, col_size, fill_color );
+			}
+
+			else
+			{
+				status = eILI9488_ERROR;
+			}
 		}
 	}
-
-	// Simple rectangle
 	else
 	{
-		// With border
-		if ( true == p_rectanegle_attr -> border.enable )
-		{
-			// Fill border
-			status |= ili9488_fill_rectangle( s_page, s_col, page_size, col_size, border_color );
+		status = eILI9488_ERROR;
 
-			// Fill without border
-			status |= ili9488_fill_rectangle( s_page + border_width, s_col + border_width, page_size - ( 2U * border_width ), col_size - ( 2U * border_width ), fill_color );
-		}
-
-		// Filled
-		else if ( true == p_rectanegle_attr -> fill.enable )
-		{
-			status |= ili9488_fill_rectangle( s_page, s_col, page_size, col_size, fill_color );
-		}
-
-		else
-		{
-			status = eILI9488_ERROR;
-		}
+		ILI9488_DBG_PRINT( "Module not initialized!" );
+		ILI9488_ASSERT( 0 );
 	}
 
 	return status;
@@ -496,37 +532,48 @@ ili9488_status_t ili9488_draw_circle(const ili9488_circ_attr_t * const p_circle_
 	ili9488_color_t border_color;
 	uint16_t border_width;
 
-	// Get positions
-	s_page = p_circle_attr -> position.start_page;
-	s_col = p_circle_attr -> position.start_col;
-	radius = p_circle_attr -> position.radius;
-
-	// Get colors
-	fill_color = p_circle_attr -> fill.color;
-	border_color = p_circle_attr -> border.color;
-
-	// Get border width
-	border_width = p_circle_attr -> border.width;
-
-	// Circle with border
-	if ( true == p_circle_attr -> border.enable )
+	// Check if init
+	if ( true == gb_is_init )
 	{
-		// Fill border
-		status |= ili9488_fill_circle( s_page, s_col, radius, border_color );
+		// Get positions
+		s_page = p_circle_attr -> position.start_page;
+		s_col = p_circle_attr -> position.start_col;
+		radius = p_circle_attr -> position.radius;
 
-		// Fill background
-		status |= ili9488_fill_circle( s_page, s_col, radius - border_width, fill_color );
+		// Get colors
+		fill_color = p_circle_attr -> fill.color;
+		border_color = p_circle_attr -> border.color;
+
+		// Get border width
+		border_width = p_circle_attr -> border.width;
+
+		// Circle with border
+		if ( true == p_circle_attr -> border.enable )
+		{
+			// Fill border
+			status |= ili9488_fill_circle( s_page, s_col, radius, border_color );
+
+			// Fill background
+			status |= ili9488_fill_circle( s_page, s_col, radius - border_width, fill_color );
+		}
+
+		// Simple filled circle
+		else if ( true == p_circle_attr -> fill.enable )
+		{
+			status |= ili9488_fill_circle( s_page, s_col, radius, fill_color );
+		}
+
+		else
+		{
+			status = eILI9488_ERROR;
+		}
 	}
-
-	// Simple filled circle
-	else if ( true == p_circle_attr -> fill.enable )
-	{
-		status |= ili9488_fill_circle( s_page, s_col, radius, fill_color );
-	}
-
 	else
 	{
 		status = eILI9488_ERROR;
+
+		ILI9488_DBG_PRINT( "Module not initialized!" );
+		ILI9488_ASSERT( 0 );
 	}
 
 

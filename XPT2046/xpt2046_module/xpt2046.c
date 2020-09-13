@@ -152,6 +152,10 @@ ili9488_circ_attr_t g_cal_circ_attr =
 
 #endif
 
+// Initialization done flag
+static bool gb_is_init = false;
+
+
 //////////////////////////////////////////////////////////////
 // FUNCTIONS PROTOTYPES
 //////////////////////////////////////////////////////////////
@@ -195,19 +199,40 @@ xpt2046_status_t xpt2046_init(void)
 {
 	xpt2046_status_t status = eXPT2046_OK;
 
-	// Initialize GPIOs & SPI
-	if ( eXPT2046_OK != xpt2046_low_if_init())
+	if ( false == gb_is_init )
 	{
-		status = eXPT2046_ERROR;
+		// Initialize GPIOs & SPI
+		if ( eXPT2046_OK != xpt2046_low_if_init())
+		{
+			status = eXPT2046_ERROR;
+		}
+		else
+		{
+			gb_is_init = true;
+		}
+
+		// Initialize FSM
+		g_cal_fsm.state.cur = eXPT2046_FSM_NORMAL;
+		g_cal_fsm.state.next = eXPT2046_FSM_NORMAL;
+		g_cal_fsm.time.duration = 0;
+		g_cal_fsm.time.first_entry = false;
 	}
 
-	// Initialize FSM
-	g_cal_fsm.state.cur = eXPT2046_FSM_NORMAL;
-	g_cal_fsm.state.next = eXPT2046_FSM_NORMAL;
-	g_cal_fsm.time.duration = 0;
-	g_cal_fsm.time.first_entry = false;
-
 	return status;
+}
+
+
+//////////////////////////////////////////////////////////////
+/*
+*			Get status of module initialization
+*
+*	param:		none
+*	return:		gb_is_init - Initialization flag
+*/
+//////////////////////////////////////////////////////////////
+bool xpt2046_is_init(void)
+{
+	return gb_is_init;
 }
 
 
@@ -226,10 +251,20 @@ xpt2046_status_t xpt2046_get_touch(uint16_t * const p_page, uint16_t * const p_c
 {
 	xpt2046_status_t status = eXPT2046_OK;
 
-	*p_page 	= g_touch.page;
-	*p_col 		= g_touch.col;
-	*p_force 	= g_touch.force;
-	*p_pressed 	= g_touch.pressed;
+	if ( true == gb_is_init )
+	{
+		*p_page 	= g_touch.page;
+		*p_col 		= g_touch.col;
+		*p_force 	= g_touch.force;
+		*p_pressed 	= g_touch.pressed;
+	}
+	else
+	{
+		status = eXPT2046_ERROR;
+
+		XPT2046_DBG_PRINT( "Module not initialized!" );
+		XPT2046_ASSERT( 0 );
+	}
 
 	return status;
 }
@@ -251,28 +286,31 @@ void xpt2046_hndl(void)
 	uint16_t force;
 	bool is_pressed;
 
-	// Get data
-	xpt2046_read_data_from_controler( &X, &Y, &force, &is_pressed );
-
-	// Apply filter
-	#if ( XPT2046_FILTER_EN )
-		xpt2046_filter_data( &X, &Y, &force, &is_pressed );
-	#endif
-
-	// Apply calibration
-	if ( g_cal_data.done )
+	if ( true == gb_is_init )
 	{
-		xpt2046_calibrate_data( &X, &Y, (const int32_t*)&g_cal_data.factors );
+		// Get data
+		xpt2046_read_data_from_controler( &X, &Y, &force, &is_pressed );
+
+		// Apply filter
+		#if ( XPT2046_FILTER_EN )
+			xpt2046_filter_data( &X, &Y, &force, &is_pressed );
+		#endif
+
+		// Apply calibration
+		if ( g_cal_data.done )
+		{
+			xpt2046_calibrate_data( &X, &Y, (const int32_t*)&g_cal_data.factors );
+		}
+
+		// Store
+		g_touch.page = X;
+		g_touch.col = Y;
+		g_touch.force = force;
+		g_touch.pressed = is_pressed;
+
+		// Calibration handler
+		xpt2046_cal_hndl();
 	}
-
-	// Store
-	g_touch.page = X;
-	g_touch.col = Y;
-	g_touch.force = force;
-	g_touch.pressed = is_pressed;
-
-	// Calibration handler
-	xpt2046_cal_hndl();
 }
 
 
@@ -410,14 +448,24 @@ xpt2046_status_t xpt2046_start_calibration(void)
 {
 	xpt2046_status_t status = eXPT2046_OK;
 
-	if ( false == g_cal_data.busy )
+	if ( true == gb_is_init )
 	{
-		g_cal_data.start = true;
-		g_cal_data.done = false;
+		if ( false == g_cal_data.busy )
+		{
+			g_cal_data.start = true;
+			g_cal_data.done = false;
+		}
+		else
+		{
+			status = eXPT2046_CAL_IN_PROGRESS;
+		}
 	}
 	else
 	{
-		status = eXPT2046_CAL_IN_PROGRESS;
+		status = eXPT2046_ERROR;
+
+		XPT2046_DBG_PRINT( "Module not initialized!" );
+		XPT2046_ASSERT( 0 );
 	}
 
 	return status;
@@ -899,7 +947,7 @@ bool xpt2046_is_calibrated(void)
 //////////////////////////////////////////////////////////////
 void xpt2046_set_cal_factors(const int32_t * const p_factors)
 {
-	// Calibration allready done some time in past
+	// Calibration already done some time in past
 	g_cal_data.done = true;
 
 	// Copy factors

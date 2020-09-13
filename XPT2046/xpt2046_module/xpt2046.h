@@ -38,6 +38,7 @@ typedef enum
 // FUNCTIONS PROTOTYPES
 //////////////////////////////////////////////////////////////
 xpt2046_status_t 	xpt2046_init					(void);
+bool				xpt2046_is_init					(void);
 void 				xpt2046_hndl					(void);
 xpt2046_status_t 	xpt2046_get_touch				(uint16_t * const p_page, uint16_t * const p_col, uint16_t * const p_force, bool * const p_pressed);
 xpt2046_status_t 	xpt2046_start_calibration		(void);
