@@ -20,7 +20,9 @@ Both drivers are fully configurable via **ili9488_config.h** and **xpt2046_confi
 ```
 
 ### 4. Initialization
-
+- Initialization of both drivers should be done only once in project.
+- User can access initilization status by calling **ili9488_is_init()** or **xpt2046_is_init()** functions respectively.
+- Example of initialization routine:
 ```
   // Init display controller
   if ( eILI9488_OK != ili9488_init() )
